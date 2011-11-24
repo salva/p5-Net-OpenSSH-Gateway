@@ -11,11 +11,12 @@ use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 my @default_backends = qw(ssh_w netcat socat pnc);
 
 sub find_gateway {
-    my ($class, %opts) = @_;
-
+    my $class = shift;
+    my %opts = (@_ & 1 ? (host => @_) : @_);
+    my $check = $opts{check};
     my $errors;
     if (exists $opts{errors}) {
-        for (my $i = 1; $i < @_; $i+=2) {
+        for (my $i = (@_ & 1); $i < @_; $i += 2) {
             if ($_[$i] eq 'errors') {
                 local ($SIG{__DIE__}, $@);
                 eval { $errors = ($_[$i+1] ||= []) };
@@ -43,8 +44,12 @@ sub find_gateway {
             next;
         };
         my $gateway = $class->new(%opts);
-        return $gateway if $gateway->check;
-        push @$errors, $gateway->error;
+        if ($gateway->check_args) {
+            if (!$check or $gateway->check) {
+                return $gateway
+            }
+        }
+        push @$errors, $gateway->errors;
     }
     push @$errors, "no suitable backend found";
     ()
