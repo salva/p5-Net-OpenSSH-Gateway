@@ -28,16 +28,16 @@ sub check_args {
     my $self = shift;
     my $proxies = $self->{proxies};
     if (@$proxies > 1) {
-        $self->_set_error("netcat can not handle more than one proxy");
+        $self->_push_error("netcat can not handle more than one proxy");
         return;
     }
     for my $proxy (@$proxies) {
         unless ($scheme2pproto{$proxy->{scheme}}) {
-            $self->_set_error("netcat does not support $proxy->{scheme} proxies");
+            $self->_push_error("netcat does not support $proxy->{scheme} proxies");
             return;
         }
         if (defined $proxy->{password}) {
-            $self->_set_error("netcat does not support password authentication for proxy access");
+            $self->_push_error("netcat does not support password authentication for proxy access");
             return;
         }
     }
@@ -51,7 +51,9 @@ sub _command_args {
         push @args, -X => $scheme2pproto{$proxy->{scheme}}, -x => $proxy->{host} . ':' . $proxy->{port};
         push @args, -P => $proxy->{user} if defined $proxy->{user};
     }
-    @args, $opts{host}, $opts{port};
+    ( $self->_slave_quote(@args),
+      $self->_slave_quote_opt(host => %opts),
+      $self->_slave_quote_opt(port => %opts) )
 }
 
 

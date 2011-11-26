@@ -24,8 +24,11 @@ sub check_args {
 sub proxy_command {
     my $self = shift;
     $self->check_args or return;
+    my %opts = $self->_parse_connection_opts(@_);
     my $ssh = $self->{via_ssh};
-    return scalar $self->{via_ssh}->make_remote_command({tunnel => 1}, $self->{host}, $self->{port});
+    return scalar $self->{via_ssh}->make_remote_command({tunnel => 1},
+                                                        $self->_slave_quote_opt(host => %opts),
+                                                        $self->_slave_quote_opt(port => %opts));
 }
 
 1;

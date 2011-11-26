@@ -13,6 +13,7 @@ sub _default_command_names { {} }
 
 sub _search_command {
     my ($self, $name) = @_;
+    $name = $self->_command unless defined $name;
     my @names = @{$self->{cmds}{$name}};
     # TODO: handle the case where an absolute path is passed
     if (defined $self->{path}) {
@@ -32,7 +33,7 @@ sub _search_command {
         return;
     }
     else {
-        return $names[0]
+        return $self->_slave_quote($names[0]);
     }
 }
 
@@ -100,7 +101,8 @@ sub _parse_proxy_opts {
     $password = $proxy->{password} unless defined $password;
 
     # sanitize url:
-    $url = join( $scheme, "://",
+    $url = join( '',
+                 $scheme, "://",
                  (defined $user ? ($user, '', (defined $password ? (':', $password) : ()), '@' ) : ()),
                  $host,
                  (defined $port ? (':', $port) : ()) );
@@ -124,21 +126,28 @@ sub _parse_connection_opts {
         }
     }
 
-    if (not defined $opts{host} and $opts{_optional_host}) {
+    if (not defined $opts{host}) {
         $opts{host} = 'UNKNOWN';
         $no_host = 1;
     }
 
     if (my $conn = Net::OpenSSH->parse_connection_opts(\%opts)) {
-        delete $conn->{host} if $no_host;
         $opts{$_} = $conn->{$_} for keys %$conn;
     }
+
+    if ($no_host) {
+        delete $opts{host};
+    }
+    else {
+        $opts{port} ||= 22;
+    }
+
     %opts;
 }
 
 sub new {
     my $class = shift;
-    my %opts = $class->_parse_connection_opts(@_, _optional_host => 1);
+    my %opts = $class->_parse_connection_opts(@_);
 
     my @proxies = map $class->_parse_proxy_opts($_),
         _array_or_scalar_to_list(delete $opts{proxies} || delete $opts{proxies});
@@ -146,14 +155,15 @@ sub new {
     my $check = delete $opts{check};
     $check = 1 unless defined $check;
 
-    my $self = { host      => $opts{host},
-                 port      => $opts{port} || 22,
-                 ipv6      => $opts{ipv6},
-                 via_ssh   => $opts{via_ssh},
-                 timeout   => $opts{timeout} || 120,
-                 check     => $check,
-                 errors    => [],
-                 proxies   => \@proxies };
+    my $self = { host        => $opts{host},
+                 port        => $opts{port},
+                 ipv6        => $opts{ipv6},
+                 via_ssh     => $opts{via_ssh},
+                 timeout     => $opts{timeout} || 120,
+                 slave_quote => 1,
+                 check       => $check,
+                 errors      => [],
+                 proxies     => \@proxies };
     bless $self, $class;
 
     if (defined $opts{path}) {
@@ -174,9 +184,9 @@ sub proxy_command {
     my $self = shift;
     $self->check_args or return;
     my %opts = $self->_parse_connection_opts(@_);
-    my ($cmd_name) = $self->_search_command($self->_command) or return;
+    my ($cmd_path) = $self->_search_command($self->_command) or return;
     my @args = $self->_command_args(%opts) or return;
-    return $self->_quote_command($cmd_name, @args);
+    return $self->_quote_command($cmd_path, @args);
 }
 
 sub _qx {
@@ -212,11 +222,13 @@ sub check_args { 1 }
 
 sub check {
     my $self = shift;
-    my %opts = $self->_parse_connection_opts(@_, _optional_host => 1);
-    if (!defined $opts{host}) {
+    my %opts = $self->_parse_connection_opts(@_);
+    unless (defined $opts{host}) {
         $self->_push_error(warning => 'gateway not checked because host has not been defined yet');
         return 1;
     }
+
+    local $self->{slave_quote};
 
     my $cmd = $self->proxy_command(%opts);
     defined $cmd or return;
@@ -243,6 +255,30 @@ sub before_ssh_connect {
         return;
     }
     1
+}
+
+my %opt_pattern = ( host => '%h',
+                    port => '%p',
+                    user => '%u' );
+
+sub _slave_quote_opt {
+    my ($self, $key, %opts) = @_;
+    my $opt = $opts{$key};
+    return $opt unless $self->{slave_quote};
+
+    if (defined $opt) {
+        $opt =~ s/%/%%/g;
+        return $opt;
+    }
+    $opt_pattern{$key};
+}
+
+sub _slave_quote {
+    my ($self, @args) = @_;
+    if ($self->{slave_quote}) {
+        s/%/%%/g for @args;
+    }
+    wantarray ? @args : $args[0]
 }
 
 sub after_ssh_connect { }
