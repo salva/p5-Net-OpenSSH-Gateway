@@ -14,7 +14,8 @@ sub _default_command_names { {} }
 sub _search_command {
     my ($self, $name) = @_;
     $name = $self->_command unless defined $name;
-    my @names = @{$self->{cmds}{$name}};
+    my $names = $self->{cmds}{$name};
+    my @names = ($names ? @$names : $name);
     # TODO: handle the case where an absolute path is passed
     if (defined $self->{path}) {
         for my $name (@names) {
@@ -30,19 +31,31 @@ sub _search_command {
             }
         }
         $self->_push_error("unable to find any of @names programs");
-        return;
     }
     else {
-        return $self->_slave_quote($names[0]);
+        my $full = $names[0];
+        if (defined $full) {
+            if (not $self->{check} or $self->_check_command_version($full)) {
+                return $self->_slave_quote($names[0]);
+            }
+        }
+        else {
+            $self->_push_error("no command found for $name");
+        }
     }
+    return
 }
 
 sub _check_command_version {
     my ($self, $full) = @_;
     my @v = $self->_command_version_args or return 1;
     my $cmd = $self->_quote_command($full, @v);
-    my $out = $self->_qx($cmd);
-    $self->_check_command_version_output($out);
+    my $out = $self->_qx("$cmd 2>&1");
+    if ($self->_check_command_version_output($out)) {
+        return 1;
+    }
+    $self->_push_error("discarding command $cmd because it failed the version test");
+    undef;
 }
 
 sub _check_command_version_output { 1 }
@@ -79,7 +92,7 @@ sub _parse_proxy_opts {
 
     $scheme = $proxy->{scheme} unless defined $scheme;
     $scheme = 'http' unless defined $scheme;
-    $scheme =~ s/^socks(s?)$/socks5$1/;
+    $scheme =~ s/^socks(s?)$/socks4$1/;
     defined $default_proxy_port{$scheme} or croak "bad proxy scheme '$scheme'";
 
     $ssl = 1 if $scheme =~ /s$/;
@@ -155,7 +168,11 @@ sub new {
     my $check = delete $opts{check};
     $check = 1 unless defined $check;
 
-    my $self = { host        => $opts{host},
+    my $name = $class;
+    $name =~ s/.*:://;
+
+    my $self = { my_name     => $name,
+                 host        => $opts{host},
                  port        => $opts{port},
                  ipv6        => $opts{ipv6},
                  via_ssh     => $opts{via_ssh},
@@ -184,14 +201,14 @@ sub proxy_command {
     my $self = shift;
     $self->check_args or return;
     my %opts = $self->_parse_connection_opts(@_);
-    my ($cmd_path) = $self->_search_command($self->_command) or return;
+    my ($cmd_path) = $self->_search_command or return;
     my @args = $self->_command_args(%opts) or return;
     return $self->_quote_command($cmd_path, @args);
 }
 
 sub _qx {
     my ($self, $cmd, $oneline, $max) = @_;
-    $max ||= 4000;
+    $max ||= 8000;
     if (open my $s, "$cmd |") {
         fcntl($s, F_SETFL, fcntl($s, F_GETFL, 0) | O_NONBLOCK);
         binmode $s;
@@ -236,7 +253,7 @@ sub check {
     my $out = $self->_qx("$cmd </dev/null 2>&1", 1);
     return 1 if $out =~ /^SSH.*\x0d\x0a/;
 
-    $self->_push_error("gateway check failed");
+    $self->_push_error("gateway $self->{my_name} check failed");
     return
 }
 

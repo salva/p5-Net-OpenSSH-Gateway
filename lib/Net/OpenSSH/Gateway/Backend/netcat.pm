@@ -16,7 +16,7 @@ sub _command_version_args { '-h' }
 
 sub _check_command_version_output {
     my ($self, $out) = @_;
-    $out =~ /OpenBSD netcat/ and return 1;
+    $out =~ /^OpenBSD netcat/m and return 1;
     undef;
 }
 

@@ -8,12 +8,11 @@ use warnings;
 use Carp;
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
-my @default_backends = qw(ssh_w netcat socat pnc);
+my @default_backends = qw(ssh_w netcat socat2 socat ncat pnc);
 
 sub find_gateway {
     my $class = shift;
     my %opts = (@_ & 1 ? (host => @_) : @_);
-    my $check = $opts{check};
     my $errors;
     if (exists $opts{errors}) {
         for (my $i = (@_ & 1); $i < @_; $i += 2) {
@@ -31,6 +30,9 @@ sub find_gateway {
     }
     @$errors = ();
 
+    $opts{check} = 1 unless defined $opts{check};
+    my $check = $opts{check};
+
     my $backends = delete $opts{backends};
     $backends = delete $opts{backend} unless defined $backends;
     $backends = \@default_backends unless defined $backends;
@@ -44,16 +46,17 @@ sub find_gateway {
             next;
         };
         my $gateway = $class->new(%opts);
-        if ($gateway->check_args) {
-            if (!$check or $gateway->check) {
-                return $gateway
-            }
+        if ($gateway->check_args and
+            (!$check or $gateway->check)) {
+            return $gateway
         }
         push @$errors, $gateway->errors;
     }
     push @$errors, "no suitable backend found";
     ()
 }
+
+
 
 1;
 __END__
