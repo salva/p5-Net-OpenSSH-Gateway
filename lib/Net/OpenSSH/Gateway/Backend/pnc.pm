@@ -6,7 +6,7 @@ use warnings;
 require Net::OpenSSH::Gateway::Backend;
 our @ISA = qw(Net::OpenSSH::Gateway::Backend);
 
-sub _command { 'pnc' }
+sub _command { 'perl' }
 
 sub _command_version_args { '-V' }
 
@@ -37,6 +37,14 @@ sub _command_args {
     my $port = $self->_slave_quote_opt(port => %opts);
 
     return ($host, $port);
+}
+
+sub _before_ssh_connect {
+    
+}
+
+sub _after_ssh_connect {
+
 }
 
 1;
