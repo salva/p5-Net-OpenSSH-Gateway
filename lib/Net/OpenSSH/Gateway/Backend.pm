@@ -11,6 +11,16 @@ sub _array_or_scalar_to_list { map { defined($_) ? (ref $_ eq 'ARRAY' ? @$_ : $_
 
 sub _default_command_names { {} }
 
+sub _default_private_opts { {} }
+
+sub _backend_name {
+    my $class = ref shift;
+    $class =~ s/.*:://;
+    $class;
+}
+
+sub _command { shift->_backend_name }
+
 sub _search_command {
     my ($self, $name) = @_;
     $name = $self->_command unless defined $name;
@@ -59,6 +69,17 @@ sub _check_command_version {
 }
 
 sub _check_command_version_output { 1 }
+
+sub _version_to_number {
+    my ($self, $ver) = @_;
+    my $n = 0;
+    my $f = 1;
+    for (split /\D+/, $ver) {
+        $n += ($_||0) * $f;
+        $f *= 0.01;
+    }
+    $n;
+}
 
 sub _command_version_args { }
 
@@ -189,10 +210,15 @@ sub new {
         $self->{path} = \@path;
     }
 
+    my $backend_name = quotemeta $self->_backend_name;
+    my %private = %{$self->_default_private_opts};
     my %cmds = %{$self->_default_command_names};
+
     for (keys %opts) {
-        $cmds{$1} = [_array_or_scalar_to_list $opts{$_}] if (/^(.*)_cmd/);
+        $private{$1} = $opts{$_} if /^${backend_name}_(.*)/;
+        $cmds{$1} = [_array_or_scalar_to_list $opts{$_}] if /^(.*)_cmd/;
     }
+    $self->{private} = \%private;
     $self->{cmds} = \%cmds;
     $self;
 }

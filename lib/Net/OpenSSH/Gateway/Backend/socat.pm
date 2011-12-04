@@ -9,20 +9,7 @@ our @ISA = qw(Net::OpenSSH::Gateway::Backend);
 my %scheme2pproto = ( http => 'PROXY',
                       socks4 => 'SOCKS4' );
 
-sub _command { 'socat' }
-
 sub _command_version_args { '-V' }
-
-sub _version_to_number {
-    my ($self, $ver) = @_;
-    my $n = 0;
-    my $f = 1;
-    for (split /\D+/, $ver) {
-        $n += ($_||0) * $f;
-        $f *= 0.01;
-    }
-    $n;
-}
 
 sub _check_command_version_output {
     my ($self, $text) = @_;
