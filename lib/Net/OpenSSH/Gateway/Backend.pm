@@ -319,7 +319,7 @@ sub _slave_quote_opt {
 sub _slave_quote {
     my ($self, @args) = @_;
     if ($self->{slave_quote}) {
-        s/%/%%/g for @args;
+        defined and s/%/%%/g for @args;
     }
     wantarray ? @args : $args[0]
 }
