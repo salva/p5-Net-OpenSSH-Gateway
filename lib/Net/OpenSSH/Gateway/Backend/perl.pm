@@ -39,7 +39,7 @@ sub _command_args {
         push @modules, "-M$k" . (@{$modules{$k}} ? '=' . join(',', @{$modules{$k}}) : '')
     }
 
-    return (@modules, -e => $code);
+    return (@modules, "-e$code");
 }
 
 sub _minify_code {
@@ -80,7 +80,7 @@ fcntl $_, F_SETFL, O_NONBLOCK|fcntl $_, F_GETFL, 0 for @in = (*STDIN, $socket), 
 
 L:
 for (0, 1) {
-    sysread $in[$_], $buffer, 8**5 and $buffer[$_] .= $buffer
+    sysread ($in[$_], $buffer, 8**5) || exit and $buffer[$_] .= $buffer
         if vec $iv, $_ * ($socket_fileno = fileno $socket), 1;
     substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "";
     vec($iv, $_ * $socket_fileno, 1) = ($l = length $buffer[$_] < 8**5);
