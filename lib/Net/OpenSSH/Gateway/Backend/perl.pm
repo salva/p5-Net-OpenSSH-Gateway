@@ -87,7 +87,7 @@ no warnings "uninitialized";
 my ($socket, @in, @out, @buffer, @in_open, @out_open, $u, $iv, $ov);
 
 ( socket($socket, AF_INET, SOCK_STREAM, 0) &&
-  connect($socket,  sockaddr_in(PORT, inet_aton("SERVER"))) ) || die $!;
+  connect($socket,  sockaddr_in PORT, inet_aton "SERVER") ) || die $!;
 
 @in = (*STDIN, $socket);
 @out = ($socket, *STDOUT);
