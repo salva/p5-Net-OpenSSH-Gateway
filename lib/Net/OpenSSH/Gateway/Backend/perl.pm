@@ -102,12 +102,8 @@ $SIG{PIPE} = "IGNORE";
 while (grep $_, @in_open, @out_open) {
     my ($iv, $ov);
     for my $ix (0, 1) {
-        if ($in_open[$ix] and length $buffer[$ix] < 50000) {
-            vec($iv, fileno($in[$ix]), 1) = 1;
-        }
-        if ($out_open[$ix] and length $buffer[$ix] > 0) {
-            vec($ov, fileno($out[$ix]), 1) = 1;
-        }
+        vec($iv, fileno($in[$ix]), 1) = ($in_open[$ix] and length $buffer[$ix] < 50000);
+        vec($ov, fileno($out[$ix]), 1) = ($out_open[$ix] and length $buffer[$ix] > 0);
     }
     if (select($iv, $ov, undef, 5) > 0) {
         for my $ix (0, 1) {
