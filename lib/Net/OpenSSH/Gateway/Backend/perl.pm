@@ -91,8 +91,6 @@ connect($socket,  sockaddr_in PORT, inet_aton "SERVER") || die $!;
 
 fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
 
-$SIG{PIPE} = "IGNORE";
-
 while (1) {
     for (0, 1) {
         my $l = length $buffer[$_];
@@ -101,8 +99,8 @@ while (1) {
     }
     if (0 < select $iv, $ov, $u, 5) {
         for (0, 1) {
-            sysread($in[$_], $buffer[$_], 8**5, length $buffer[$_]) || exit if vec $iv, fileno $in[$_], 1;
-            substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5) || exit, "" if vec $ov, fileno $out[$_], 1;
+            sysread $in[$_], $buffer[$_], 8**5, length $buffer[$_] if vec $iv, fileno $in[$_], 1;
+            substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "" if vec $ov, fileno $out[$_], 1;
         }
     }
 }
