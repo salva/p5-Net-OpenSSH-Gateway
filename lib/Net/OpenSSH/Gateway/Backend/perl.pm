@@ -100,8 +100,8 @@ while (1) {
     my ($iv, $ov);
     for my $ix (0, 1) {
         my $l = length $buffer[$ix];
-        vec($iv, fileno($in[$ix]), 1) = ($l < 50000);
-        vec($ov, fileno($out[$ix]), 1) = ($l > 0);
+        vec($iv, fileno $in[$ix], 1) = ($l < 50000);
+        vec($ov, fileno $out[$ix], 1) = ($l > 0);
     }
     if (select($iv, $ov, undef, 5) > 0) {
         for my $ix (0, 1) {
