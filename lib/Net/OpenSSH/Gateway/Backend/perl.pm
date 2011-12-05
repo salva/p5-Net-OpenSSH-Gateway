@@ -104,12 +104,12 @@ while (1) {
         vec($ov, fileno $out[$_], 1) = ($l > 0);
     }
     if (select($iv, $ov, undef, 5) > 0) {
-        for my $ix (0, 1) {
-            if (vec($iv, fileno($in[$ix]), 1)) {
-                sysread($in[$ix], $buffer[$ix], 16 * 1024, length $buffer[$ix]) || exit;
+        for (0, 1) {
+            if (vec($iv, fileno($in[$_]), 1)) {
+                sysread($in[$_], $buffer[$_], 16 * 1024, length $buffer[$_]) || exit;
             }
-            if (vec($ov, fileno($out[$ix]), 1)) {
-                substr $buffer[$ix], 0, syswrite($out[$ix], $buffer[$ix], 16 * 1024) || exit, "";
+            if (vec($ov, fileno($out[$_]), 1)) {
+                substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 16 * 1024) || exit, "";
             }
         }
     }
