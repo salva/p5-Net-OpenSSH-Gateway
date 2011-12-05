@@ -22,8 +22,7 @@ sub check_args {
 }
 
 my %modules = ( Socket => [],
-                Fcntl  => [qw(F_SETFL F_GETFL O_NONBLOCK)],
-                Errno  => [qw(ENOTSOCK)] );
+                Fcntl  => [qw(F_SETFL F_GETFL O_NONBLOCK)] );
 
 sub _command_args {
     my ($self, %opts) = @_;
@@ -45,7 +44,7 @@ sub _command_args {
 
 sub _minify_code {
     my ($self, $code) = @_;
-    if (0) {
+    if (1) {
         $code =~ s/^#.*$//m;
         $code =~ s/\s+/ /g;
         $code =~ s/\s(?!\w)//g; # that breaks "use foo 'doz'" so don't use that!!!
@@ -75,32 +74,27 @@ sub _generate_pnc {
 
 __DATA__
 
-use Socket;
-use Carp;
-use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
-use Errno qw(ENOTSOCK);
-
 use strict;
 use warnings;
 no warnings "uninitialized";
 
-my ($socket, @in, @out, @buffer, @in_open, @out_open, $u, $iv, $ov);
+my ($socket, @in, @out, @buffer, @in_open, @out_open, $u, $iv, $ov, $l);
 
 socket($socket, AF_INET, SOCK_STREAM, 0) &&
 connect($socket,  sockaddr_in PORT, inet_aton "SERVER") || die $!;
 
 fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
 
-while (1) {
+A:
+for (0, 1) {
+    $l = length $buffer[$_];
+    vec($iv, fileno $in[$_], 1) = ($l < 8**5);
+    vec($ov, fileno $out[$_], 1) = ($l > 0);
+}
+if (0 < select $iv, $ov, $u, 5) {
     for (0, 1) {
-        my $l = length $buffer[$_];
-        vec($iv, fileno $in[$_], 1) = ($l < 8**5);
-        vec($ov, fileno $out[$_], 1) = ($l > 0);
-    }
-    if (0 < select $iv, $ov, $u, 5) {
-        for (0, 1) {
-            sysread $in[$_], $buffer[$_], 8**5, length $buffer[$_] if vec $iv, fileno $in[$_], 1;
-            substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "" if vec $ov, fileno $out[$_], 1;
-        }
+        sysread $in[$_], $buffer[$_], 8**5, length $buffer[$_] if vec $iv, fileno $in[$_], 1;
+        substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "" if vec $ov, fileno $out[$_], 1;
     }
 }
+goto A
