@@ -80,12 +80,10 @@ fcntl $_, F_SETFL, O_NONBLOCK|fcntl $_, F_GETFL, 0 for @in = (*STDIN, $socket), 
 
 A:
 for (0, 1) {
-    vec($iv, fileno $in[$_], 1) = ($l = length $buffer < 8**5);
+    sysread $in[$_], $buffer[$_], 8**5, length $buffer[$_] if vec $iv, fileno $in[$_], 1;
+    substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "";
+    vec($iv, fileno $in[$_], 1) = ($l = length $buffer[$_] < 8**5);
     vec($ov, fileno $out[$_], 1) = ($l > 0);
 }
 select $iv, $ov, $u, 5;
-for (0, 1) {
-    sysread $in[$_], $buffer[$_], 8**5, length $buffer[$_] if vec $iv, fileno $in[$_], 1;
-    substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "";
-}
 goto A
