@@ -91,7 +91,7 @@ my $max_buffer_size = 64 * 1024;
 @in = (*STDIN, $socket);
 @out = ($socket, *STDOUT);
 
-fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK),binmode $_ for @in, @out;
+fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in, @out;
 
 @buffer = ("", "");
 @in_open= (1, 1);
