@@ -84,7 +84,7 @@ use strict;
 use warnings;
 no warnings "uninitialized";
 
-my ($socket, @in, @out, @buffer, @in_open, @out_open);
+my ($socket, @in, @out, @buffer, @in_open, @out_open, $u, $iv, $ov);
 
 ( socket($socket, AF_INET, SOCK_STREAM, 0) &&
   connect($socket,  sockaddr_in(PORT, inet_aton("SERVER"))) ) || die $!;
@@ -97,13 +97,12 @@ fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in, @out;
 $SIG{PIPE} = "IGNORE";
 
 while (1) {
-    my ($iv, $ov);
     for (0, 1) {
         my $l = length $buffer[$_];
         vec($iv, fileno $in[$_], 1) = ($l < 50000);
         vec($ov, fileno $out[$_], 1) = ($l > 0);
     }
-    if (0 < select $iv, $ov, undef, 5) {
+    if (0 < select $iv, $ov, $u, 5) {
         for (0, 1) {
             vec $iv, fileno($in[$_]), 1 and sysread($in[$_], $buffer[$_], 16 * 1024, length $buffer[$_]) || exit;
             vec $ov, fileno($out[$_]), 1 and substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 16 * 1024) || exit, "";
