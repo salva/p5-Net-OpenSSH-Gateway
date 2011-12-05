@@ -8,7 +8,7 @@ use warnings;
 use Carp;
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
 
-my @default_backends = qw(ssh_w netcat socat2 socat ncat pnc);
+my @default_backends = qw(ssh_w netcat socat socat2 ncat perl pnc);
 
 sub find_gateway {
     my $class = shift;

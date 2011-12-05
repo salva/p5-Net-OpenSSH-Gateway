@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Carp;
 use Fcntl;
+use POSIX;
 
 require Net::OpenSSH;
 
@@ -68,7 +69,7 @@ sub _check_command_version {
     my ($self, $full) = @_;
     my @v = $self->_command_version_args or return 1;
     my $cmd = $self->_quote_command($full, @v);
-    my $out = $self->_qx("$cmd 2>&1");
+    my $out = $self->_qx($cmd);
     if ($self->_check_command_version_output($out)) {
         return 1;
     }
@@ -243,30 +244,41 @@ sub proxy_command {
 sub _qx {
     my ($self, $cmd, $oneline, $max) = @_;
     $max ||= 8000;
-    # FIXME: use socket pair here!
-    if (open my $s, "$cmd |") {
-        fcntl($s, F_SETFL, fcntl($s, F_GETFL, 0) | O_NONBLOCK);
-        binmode $s;
-        my $buffer = '';
-        my $time_limit = time + $self->{timeout};
-        while (1) {
-            my $iv = '';
-            vec($iv, fileno($s), 1) = 1;
-            if (select($iv, undef, undef, 1) > 0) {
-                sysread($s, $buffer, 1000, length $buffer) or last;
-            }
-            last if ( time > $time_limit or
-                      length $buffer > $max or
-                      ( $oneline and $buffer =~ /\n/) );
-        }
-        time > $time_limit and $self->_push_error(warning => "remote command '$cmd' timed out");
-        close $s;
-        return $buffer;
-    }
-    else {
-        $self->_push_error("unable to run command '$cmd': $!");
+    # FIXME: use socketpair here!
+    my ($pr, $pw);
+    unless (pipe $pr, $pw) {
+        $self->_push_error("unable to create pipe: $!");
         return '';
     }
+    my $pid = open my $s, "-|";
+    unless ($pid) {
+        unless (defined $pid) {
+            $self->_push_error("unable to fork a new process: $!");
+            return '';
+        }
+        POSIX::dup2(fileno $pr, 0);
+        POSIX::dup2(1, 2);
+        { exec $cmd };
+        POSIX::_exit(1);
+    }
+    fcntl($s, F_SETFL, fcntl($s, F_GETFL, 0) | O_NONBLOCK);
+    binmode $s;
+    my $buffer = '';
+    my $time_limit = time + $self->{timeout};
+    while (1) {
+        my $iv = '';
+        vec($iv, fileno($s), 1) = 1;
+        if (select($iv, undef, undef, 1) > 0) {
+            sysread($s, $buffer, 1000, length $buffer) or last;
+        }
+        last if ( time > $time_limit or
+                  length $buffer > $max or
+                  ( $oneline and $buffer =~ /\n/) );
+    }
+    time > $time_limit and $self->_push_error(warning => "remote command '$cmd' timed out");
+    close $pw;
+    close $s;
+    return $buffer;
 }
 
 sub check_args { 1 }
@@ -285,7 +297,7 @@ sub check {
     defined $cmd or return;
 
     $self->before_ssh_connect or return;
-    my $out = $self->_qx("$cmd </dev/null 2>&1", 1);
+    my $out = $self->_qx($cmd, 1);
     $self->after_ssh_connect;
 
     return 1 if $out =~ /^SSH.*\x0d\x0a/;
