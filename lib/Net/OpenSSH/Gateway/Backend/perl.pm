@@ -94,23 +94,21 @@ my ($socket, @in, @out, @buffer, @in_open, @out_open);
 
 fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in, @out;
 
-@in_open= (1, 1);
-@out_open = (1, 1);
-
 $SIG{PIPE} = "IGNORE";
 
-while (grep $_, @in_open, @out_open) {
+while (1) {
     my ($iv, $ov);
     for my $ix (0, 1) {
-        vec($iv, fileno($in[$ix]), 1) = ($in_open[$ix] and length $buffer[$ix] < 50000);
-        vec($ov, fileno($out[$ix]), 1) = ($out_open[$ix] and length $buffer[$ix] > 0);
+        my $l = length $buffer[$ix];
+        vec($iv, fileno($in[$ix]), 1) = ($l < 50000);
+        vec($ov, fileno($out[$ix]), 1) = ($l > 0);
     }
     if (select($iv, $ov, undef, 5) > 0) {
         for my $ix (0, 1) {
-            if ($in_open[$ix] and vec($iv, fileno($in[$ix]), 1)) {
+            if (vec($iv, fileno($in[$ix]), 1)) {
                 sysread($in[$ix], $buffer[$ix], 16 * 1024, length $buffer[$ix]) || exit;
             }
-            if ($out_open[$ix] and vec($ov, fileno($out[$ix]), 1)) {
+            if (vec($ov, fileno($out[$ix]), 1)) {
                 substr $buffer[$ix], 0, syswrite($out[$ix], $buffer[$ix], 16 * 1024) || exit, "";
             }
         }
