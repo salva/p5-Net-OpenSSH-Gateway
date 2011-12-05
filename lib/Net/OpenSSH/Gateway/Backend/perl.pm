@@ -78,7 +78,7 @@ connect($socket,  sockaddr_in PORT, inet_aton "SERVER") || die $!;
 
 fcntl $_, F_SETFL, O_NONBLOCK|fcntl $_, F_GETFL, 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
 
-A:
+L:
 for (0, 1) {
     sysread $in[$_], $buffer[$_], 8**5, length $buffer[$_] if vec $iv, fileno $in[$_], 1;
     substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "";
@@ -86,4 +86,4 @@ for (0, 1) {
     vec($ov, fileno $out[$_], 1) = ($l > 0);
 }
 select $iv, $ov, $u, 5;
-goto A
+goto L
