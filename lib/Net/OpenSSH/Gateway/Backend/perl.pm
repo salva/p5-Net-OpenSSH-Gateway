@@ -21,33 +21,38 @@ sub check_args {
     1;
 }
 
+my %modules = ( Socket => [],
+                Fcntl  => [qw(F_SETFL F_GETFL O_NONBLOCK)],
+                Errno  => [qw(ENOTSOCK)] );
+
 sub _command_args {
     my ($self, %opts) = @_;
 
-    my $code = $self->_slave_quote($self->_reduce_code($data));
+    my $code = $self->_slave_quote($self->_minify_code($data));
 
     my $host = $self->_slave_quote_opt(host => %opts);
     my $port = $self->_slave_quote_opt(port => %opts);
     $code =~ s/\bPORT\b/$port/g;
     $code =~ s/\bSERVER\b/$host/g;
 
-    return ('-MSocket', '-MFcntl=F_SETFL,F_GETFL,O_NONBLOCK', '-MErrno=ENOTSOCK', -e => $code);
+    my @modules;
+    for my $k (keys %modules) {
+        push @modules, "-M$k" . (@{$modules{$k}} ? '=' . join(',', @{$modules{$k}}) : '')
+    }
+
+    return (@modules, -e => $code);
 }
 
-my %modules = ( Socket => [],
-                Fcntl  => [qw(F_SETFL F_GETFL O_NONBLOCK)],
-                Errno  => [qw(ENOTSOCK)] );
-
-sub _reduce_code {
+sub _minify_code {
     my ($self, $code) = @_;
 
-    #$code =~ s/\s+/ /g;
-    #$code =~ s/\s(?!\w)//g;
-    #$code =~ s/(?<!\w)\s//g;
-    #$code =~ s/;}/}/g;
-    #my $next = 'c';
-    #my %vars;
-    #$code =~ s/([\$\@%])([a-z]\w*)/$1 . ($vars{$2} ||= $next++)/ge;
+    $code =~ s/\s+/ /g;
+    $code =~ s/\s(?!\w)//g;
+    $code =~ s/(?<!\w)\s//g;
+    $code =~ s/;}/}/g;
+    my $next = 'c';
+    my %vars;
+    $code =~ s/([\$\@%])([a-z]\w*)/$1 . ($vars{$2} ||= $next++)/ge;
 
     $code;
 }
@@ -59,7 +64,7 @@ sub _generate_pnc {
 
     print $out "#!/usr/bin/perl\n";
     print $out "use $_" . (@{$modules{$_}} ? " qw(@{$modules{$_}})" : '') .";\n" for keys %modules;
-    my $code = $self->_reduce_code($data);
+    my $code = $self->_minify_code($data);
     $code =~ s/\bSERVER\b/\$ARGV[0]/;
     $code =~ s/\bPORT\b/\$ARGV[1]/;
     print $out "$code\n";
