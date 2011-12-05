@@ -103,14 +103,10 @@ while (1) {
         vec($iv, fileno $in[$_], 1) = ($l < 50000);
         vec($ov, fileno $out[$_], 1) = ($l > 0);
     }
-    if (select($iv, $ov, undef, 5) > 0) {
+    if (0 < select $iv, $ov, undef, 5) {
         for (0, 1) {
-            if (vec($iv, fileno($in[$_]), 1)) {
-                sysread($in[$_], $buffer[$_], 16 * 1024, length $buffer[$_]) || exit;
-            }
-            if (vec($ov, fileno($out[$_]), 1)) {
-                substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 16 * 1024) || exit, "";
-            }
+            vec $iv, fileno($in[$_]), 1 and sysread($in[$_], $buffer[$_], 16 * 1024, length $buffer[$_]) || exit;
+            vec $ov, fileno($out[$_]), 1 and substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 16 * 1024) || exit, "";
         }
     }
 }
