@@ -99,16 +99,6 @@ fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in, @out;
 
 $SIG{PIPE} = "IGNORE";
 
-sub _shutdown {
-    my ($socket, $dir) = @_;
-    unless (shutdown($socket, $dir)) {
-        if ($! == ENOTSOCK) {
-            return close ($socket);
-        }
-    }
-    undef;
-}
-
 while (grep $_, @in_open, @out_open) {
     my ($iv, $ov);
     for my $ix (0, 1) {
