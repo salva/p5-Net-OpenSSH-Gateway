@@ -73,13 +73,6 @@ sub _generate_pnc {
 }
 
 __DATA__
-
-use strict;
-use warnings;
-no warnings "uninitialized";
-
-my ($socket, @in, @out, @buffer, @in_open, @out_open, $u, $iv, $ov, $l);
-
 socket($socket, AF_INET, SOCK_STREAM, 0) &&
 connect($socket,  sockaddr_in PORT, inet_aton "SERVER") || die $!;
 
