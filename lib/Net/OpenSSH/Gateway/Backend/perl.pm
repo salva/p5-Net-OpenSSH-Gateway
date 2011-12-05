@@ -83,8 +83,6 @@ use warnings;
 
 my ($socket, @in, @out, @buffer, @in_open, @out_open);
 
-my $max_buffer_size = 64 * 1024;
-
 ( socket($socket, AF_INET, SOCK_STREAM, 0) &&
   connect($socket,  sockaddr_in(PORT, inet_aton("SERVER"))) ) || die $!;
 
@@ -92,6 +90,8 @@ my $max_buffer_size = 64 * 1024;
 @out = ($socket, *STDOUT);
 
 fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in, @out;
+
+
 
 @buffer = ("", "");
 @in_open= (1, 1);
@@ -112,7 +112,7 @@ sub _shutdown {
 while (grep $_, @in_open, @out_open) {
     my ($iv, $ov) = ('', '');
     for my $ix (0, 1) {
-        if ($in_open[$ix] and length $buffer[$ix] < $max_buffer_size) {
+        if ($in_open[$ix] and length $buffer[$ix] < 50000) {
             vec($iv, fileno($in[$ix]), 1) = 1;
         }
         if ($out_open[$ix] and length $buffer[$ix] > 0) {
