@@ -56,6 +56,14 @@ sub _search_command {
     return
 }
 
+sub _sftp {
+    my $self = shift;
+    $self->{sftp} ||= do {
+        my $ssh = $self->{via_ssh};
+        $ssh ? $ssh->_sftp : undef
+    }
+}
+
 sub _check_command_version {
     my ($self, $full) = @_;
     my @v = $self->_command_version_args or return 1;
@@ -276,7 +284,10 @@ sub check {
     my $cmd = $self->proxy_command(%opts);
     defined $cmd or return;
 
+    $self->before_ssh_connect or return;
     my $out = $self->_qx("$cmd </dev/null 2>&1", 1);
+    $self->after_ssh_connect;
+
     return 1 if $out =~ /^SSH.*\x0d\x0a/;
 
     $self->_push_error("gateway $self->{my_name} check failed");
