@@ -243,6 +243,7 @@ sub proxy_command {
 sub _qx {
     my ($self, $cmd, $oneline, $max) = @_;
     $max ||= 8000;
+    # FIXME: use socket pair here!
     if (open my $s, "$cmd |") {
         fcntl($s, F_SETFL, fcntl($s, F_GETFL, 0) | O_NONBLOCK);
         binmode $s;
@@ -253,7 +254,6 @@ sub _qx {
             vec($iv, fileno($s), 1) = 1;
             if (select($iv, undef, undef, 1) > 0) {
                 sysread($s, $buffer, 1000, length $buffer) or last;
-                $buffer =~ /\x0d\x0a/ and last;
             }
             last if ( time > $time_limit or
                       length $buffer > $max or
