@@ -45,15 +45,17 @@ sub _command_args {
 
 sub _minify_code {
     my ($self, $code) = @_;
+    if (0) {
+        $code =~ s/^#.*$//m;
+        $code =~ s/\s+/ /g;
+        $code =~ s/\s(?!\w)//g; # that breaks "use foo 'doz'" so don't use that!!!
+        $code =~ s/(?<!\w)\s//g;
+        $code =~ s/;}/}/g;
 
-    $code =~ s/\s+/ /g;
-    $code =~ s/\s(?!\w)//g;
-    $code =~ s/(?<!\w)\s//g;
-    $code =~ s/;}/}/g;
-    my $next = 'c';
-    my %vars;
-    $code =~ s/([\$\@%])([a-z]\w*)/$1 . ($vars{$2} ||= $next++)/ge;
-
+        my $next = 'c';
+        my %vars;
+        $code =~ s/([\$\@%])([a-z]\w*)/$1 . ($vars{$2} ||= $next++)/ge;
+    }
     $code;
 }
 
@@ -80,6 +82,7 @@ use Errno qw(ENOTSOCK);
 
 use strict;
 use warnings;
+no warnings "uninitialized";
 
 my ($socket, @in, @out, @buffer, @in_open, @out_open);
 
@@ -91,9 +94,6 @@ my ($socket, @in, @out, @buffer, @in_open, @out_open);
 
 fcntl($_, F_SETFL, fcntl($_, F_GETFL, 0)|O_NONBLOCK) for @in, @out;
 
-
-
-@buffer = ("", "");
 @in_open= (1, 1);
 @out_open = (1, 1);
 
@@ -110,7 +110,7 @@ sub _shutdown {
 }
 
 while (grep $_, @in_open, @out_open) {
-    my ($iv, $ov) = ('', '');
+    my ($iv, $ov);
     for my $ix (0, 1) {
         if ($in_open[$ix] and length $buffer[$ix] < 50000) {
             vec($iv, fileno($in[$ix]), 1) = 1;
