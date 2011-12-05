@@ -99,7 +99,7 @@ $SIG{PIPE} = "IGNORE";
 while (1) {
     for (0, 1) {
         my $l = length $buffer[$_];
-        vec($iv, fileno $in[$_], 1) = ($l < 50000);
+        vec($iv, fileno $in[$_], 1) = ($l < 8**5);
         vec($ov, fileno $out[$_], 1) = ($l > 0);
     }
     if (0 < select $iv, $ov, $u, 5) {
