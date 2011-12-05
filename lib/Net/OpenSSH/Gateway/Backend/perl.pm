@@ -122,34 +122,10 @@ while (grep $_, @in_open, @out_open) {
     if (select($iv, $ov, undef, 5) > 0) {
         for my $ix (0, 1) {
             if ($in_open[$ix] and vec($iv, fileno($in[$ix]), 1)) {
-                my $bytes = sysread($in[$ix], $buffer[$ix], 16 * 1024, length $buffer[$ix]);
-                unless ($bytes) {
-                    $in_open[$ix] = 0;
-                    _shutdown($in[$ix], 0);
-                    unless (length $buffer[$ix]) {
-                        $out_open[$ix] = 0;
-                        _shutdown($out[$ix], 1);
-                    }
-                }
+                sysread($in[$ix], $buffer[$ix], 16 * 1024, length $buffer[$ix]) || exit;
             }
             if ($out_open[$ix] and vec($ov, fileno($out[$ix]), 1)) {
-                my $bytes = syswrite($out[$ix], $buffer[$ix], 16 * 1024);
-                if ($bytes) {
-                    substr($buffer[$ix], 0, $bytes, "");
-                    unless ($in_open[$ix] or length $buffer[$ix]) {
-                        $out_open[$ix] = 0;
-                        _shutdown($out[$ix], 1);
-                    }
-                }
-                else {
-                    $out_open[$ix] = 0;
-                    _shutdown($out[$ix], 1);
-                    $buffer[$ix] = "";
-                    if ($in_open[$ix]) {
-                        $in_open[$ix] = 0;
-                        _shutdown($in[$ix], 0);
-                    }
-                }
+                substr $buffer[$ix], 0, syswrite($out[$ix], $buffer[$ix], 16 * 1024) || exit, "";
             }
         }
     }
