@@ -75,15 +75,15 @@ sub _generate_pnc {
 __DATA__
 socket($socket, AF_INET, SOCK_STREAM, 0) &&
 connect($socket,  sockaddr_in PORT, inet_aton "SERVER") || die $!;
-$socket_fn = fileno $socket;
 fcntl $_, F_SETFL, O_NONBLOCK|fcntl $_, F_GETFL, 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
 
 L:
 for (0, 1) {
-    sysread $in[$_], $buffer[$_], 8**5, length $buffer[$_] if vec $iv, $in_fn = $socket_fn * $_, 1;
+    sysread $in[$_], $buffer, 8**5 and $buffer[$_] .= $buffer
+        if vec $iv, $_ * ($socket_fileno = fileno $socket), 1;
     substr $buffer[$_], 0, syswrite($out[$_], $buffer[$_], 8**5), "";
-    vec($iv, $in_fn, 1) = ($l = length $buffer[$_] < 8**5);
-    vec($ov, $_ || $socket_fn, 1) = !!$l;
+    vec($iv, $_ * $socket_fileno, 1) = ($l = length $buffer[$_] < 8**5);
+    vec($ov, $_ || $socket_fileno, 1) = !!$l;
 }
 select $iv, $ov, $u, 5;
 goto L
