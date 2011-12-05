@@ -31,7 +31,7 @@ sub _command_args {
     $code =~ s/\bPORT\b/$port/g;
     $code =~ s/\bSERVER\b/$host/g;
 
-    return ('-MSocket', '-MFcntl=F_SETFL,G_GETFL,O_NONBLOCK', '-MErrno=ENOTSOCK', -e => $code);
+    return ('-MSocket', '-MFcntl=F_SETFL,F_GETFL,O_NONBLOCK', '-MErrno=ENOTSOCK', -e => $code);
 }
 
 my %modules = ( Socket => [],
