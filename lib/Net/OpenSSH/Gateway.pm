@@ -230,49 +230,158 @@ sub find_gateway {
 
 1;
 __END__
-# Below is stub documentation for your module. You'd better edit it!
 
 =head1 NAME
 
-Net::OpenSSH::Gateway - Perl extension for blah blah blah
+Net::OpenSSH::Gateway - Let Net::OpenSSH connect through proxies and gateways
 
 =head1 SYNOPSIS
 
-  use Net::OpenSSH::Gateway;
-  blah blah blah
+  use Net::OpenSSH;
+
+  my $ssh = Net::OpenSSH->new($target,
+                              gateway => { proxies => ['https://one.proxy.org',
+                                                       'socks://proxy.com',
+                                                       'ssh://some.ssh.server',
+                                                       'http://two.athome.org'],
+                                           backends => [qw(socat2 perl)] });
+
+  $ssh->system('ls');
 
 =head1 DESCRIPTION
 
-Stub documentation for Net::OpenSSH::Gateway, created by h2xs. It looks like the
-author of the extension was negligent enough to leave the stub
-unedited.
+This module tries to find a way to connect to some remote SSH server
+crossing through proxies and SSH gateways chains.
 
-Blah blah blah.
+Under the hood it tries to produce a shell command that can be passed
+to OpenSSH client using the C<ProxyCommand> directive (see
+L<ssh_config(5)>).
 
-=head2 EXPORT
+The module would try to use different commands in order to establish
+the connection as for instance L<netcat(1)>, L<socat(1)>, L<ncat(1)>,
+L<proxytunnel> or even Perl one-liners.
 
-None by default.
+In order to cross through SSH gateways, intermediate Net::OpenSSH
+objects are also created.
 
+As the list of commands supported have different capabilities (for
+instance, they may only support crossing a fixed number of proxies or
+lack support for the some proxying protocol or SSL), a set of backend
+modules is used to implement support for every one of them.
 
+When one new gateway object is requested, the backend modules are
+tried in order until one of then is able to fulfill the given
+requirements.
+
+=head2 API
+
+This module has and object oriented interface exposing the following
+methods:
+
+=over 4
+
+=item Net::OpenSSH::Gateway->find_gateway($target, %opts)
+
+=item Net::OpenSSH::Gateway->find_gateway(%opts)
+
+Tries to find a way to reach the target host through the given list of
+proxies and gateways.
+
+Returns a gateway object that can be passed to Net::OpenSSH.
+
+The accepted options are:
+
+=over 4
+
+=item backends => \@backends
+
+A list of the backend modules that should be tried when looking for a
+way to connect to the remote host. If not given, a sane default list
+is used.
+
+=item proxies => $url
+
+=item proxies => \@url
+
+=item proxies => \@proxy_description
+
+A list of proxies that should be crossed in order to reach the target
+host.
+
+A proxy declaration can be a single declaration as for instance:
+
+  http://host:port
+  https://user:password@host:port
+  socks4://host
+  ssh://user@host
+  ssl://
+
+or a hash containing some of the following entries:
+
+=over 4
+
+=item url
+
+=item scheme
+
+=item host
+
+=item port
+
+=item user
+
+=item password
+
+=item ssl
+
+=back
+
+or others specific to the proxing protocol or private to some backend.
+
+=back
+
+=item via_ssh => $ssh
+
+A Net::OpenSSH object with an open connection to a SSH gateway that
+should be used as an starting point on the connection chain.
+
+=item check => $bool
+
+When the backends should check that the generated command works
+running it and checking if an SSH server lays at the other side.
+
+The default value is true when the C<$target> object is given
+(otherwise, it is not possible to check it). Besides running the
+generated ProxyCommand command. Other actions are performed in order
+to check the validity of the command as for instance that the base
+command exists on the machine or that its version is adequate.
+
+=item path => \@path
+
+A list of directories where to look for commands. By default the
+backend will relly on the shell using C<$PATH> in order to find them.
+
+=item ${cmd}_cmd => $cmd_path
+
+The path for some given command can be declared in this way. For
+instance, if the C<netcat> command is installed in some custom place
+the following argument can be passed:
+
+  netcat_cmd => '/usr/local/netcat/bin/nc'
+
+=item ${backend}_${entry} => $data
+
+backend private arguments can be passed in that way.
+
+=back
 
 =head1 SEE ALSO
 
-Mention other useful documentation such as the documentation of
-related modules or operating system documentation (such as man pages
-in UNIX), or any relevant external documentation such as RFCs or
-standards.
-
-If you have a mailing list set up for your module, mention it here.
-
-If you have a web site set up for your module, mention it here.
-
-=head1 AUTHOR
-
-Salvador Fandino, E<lt>salva@E<gt>
+L<Net::OpenSSH>.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2011 by Salvador Fandino
+Copyright (C) 2011 by Salvador Fandino E<lt>sfandino@yahoo.comE<gt>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.12.4 or,
