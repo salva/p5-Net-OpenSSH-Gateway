@@ -100,65 +100,6 @@ sub _quote_command {
                    : Net::OpenSSH->shell_quote(@cmd) );
 }
 
-my %default_proxy_port = ( http    => 8080,
-                           https   => 8443,
-                           socks4  => 1080,
-                           socks5  => 1080,
-                           socks4s => 1443,
-                           socks5s => 1443 );
-
-sub _parse_proxy_opts {
-    my ($class, $proxy) = @_;
-    $proxy = { url => $proxy } unless ref $proxy;
-
-    my $url = $proxy->{url};
-    my ($scheme, $user, $password, $host, $port, $ssl);
-
-    if (defined $url) {
-        ($scheme, $user, $password, $host, $port) =
-            $url =~ m{^(?:(https?|socks[45]?s?)://)?(?:([^:]+?)(?::(.*))?\@)?([a-z0-9][\w-]*(?:\.[a-z0-9][\w-]*)*)(?::([\w+]+))?/?$}i
-                or croak "bad proxy url '$url'";
-    }
-
-    $scheme = $proxy->{scheme} unless defined $scheme;
-    $scheme = 'http' unless defined $scheme;
-    $scheme =~ s/^socks(s?)$/socks4$1/;
-    defined $default_proxy_port{$scheme} or croak "bad proxy scheme '$scheme'";
-
-    $ssl = 1 if $scheme =~ /s$/;
-    $ssl = $proxy->{ssl} unless defined $ssl;
-
-    $scheme =~ s/s*$/s/ if $ssl;
-
-    $host = $proxy->{host} unless defined $host;
-    defined $host or croak "proxy name or address missing";
-
-    $port = $proxy->{port} unless defined $port;
-    $port = $default_proxy_port{$scheme} unless defined $port;
-    if ($port =~ /\D/) {
-        $port = getservbyname($port, 'tcp')
-            or croak "invalid proxy port specification '$port'";
-    }
-
-    $user   = $proxy->{user} unless defined $user;
-    $password = $proxy->{password} unless defined $password;
-
-    # sanitize url:
-    $url = join( '',
-                 $scheme, "://",
-                 (defined $user ? ($user, '', (defined $password ? (':', $password) : ()), '@' ) : ()),
-                 $host,
-                 (defined $port ? (':', $port) : ()) );
-
-    return { url      => $url,
-             scheme   => $scheme,
-             host     => $host,
-             port     => $port,
-             user     => $user,
-             password => $password,
-             ssl      => $ssl };
-}
-
 sub _parse_connection_opts {
     my $self = shift;
     my %opts = (@_ & 1 ? (host => @_) : @_);
@@ -191,12 +132,8 @@ sub _parse_connection_opts {
 sub new {
     my $class = shift;
     my %opts = $class->_parse_connection_opts(@_);
-
-    my @proxies = map $class->_parse_proxy_opts($_),
-        _array_or_scalar_to_list(delete $opts{proxies} || delete $opts{proxies});
-
+    my @proxies = delete $opts{proxies};
     my $check = delete $opts{check};
-    $check = 1 unless defined $check;
 
     my $name = $class;
     $name =~ s/.*:://;
