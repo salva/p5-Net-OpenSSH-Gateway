@@ -375,6 +375,111 @@ backend private arguments can be passed in that way.
 
 =back
 
+=head2 Backends
+
+The backends currently available are as follows:
+
+=over 4
+
+=item netcat
+
+Uses C<netcat> to open a connection to the remote server.
+
+There are several C<netcat> implementations available and even if most
+of them try to remain compatible with the original one, there may be
+suttle differences between then that could cause this backend to
+fail. If you believe this is happening with your particular C<netcat>,
+please report it!
+
+In any case, it has a preference for the the OpenBSD netcat version.
+
+This backend can handle up to two HTTP or/and SOCKS4/5 proxies. It
+does not support SSL.
+
+=item socat
+
+Uses C<socat> to open a connection to the remote server.
+
+This backend support crossing one HTTP or SOCKS4 proxy. It does not
+support SSL.
+
+=item socat2
+
+Uses C<socat> version 2 (still in beta) to connect to the remote
+server.
+
+This backend supports any combination of HTTP, SOCKS4, SOCKS5 and SSL
+proxies.
+
+=item ncat
+
+Uses C<ncat> command (distributed as part of the nmap package) to
+connect to the remote host.
+
+Note than versions of this older than 5.22 were buggy and cause SSH
+session to stall.
+
+This backend supports one HTTP or SOCKS4 proxy. It does not support
+SSL.
+
+=item proxytunnel
+
+This backend uses the C<proxytunnel> command in order to connect to
+the remote server.
+
+It supports up to two HTTP proxies and SSL and can handle NTLM
+authentication.
+
+This module accepts the following extra options:
+
+=over 4
+
+=item ntlm => $bool
+
+Use NTLM for authentication on the proxies instead of the basic method.
+
+=item quiet => $bool
+
+=item verbose => $bool
+
+Control the verbosity of C<proxytunnel>.
+
+=item passfile => $path
+
+Path to file containing the proxy authentication credentials.
+
+=item domain => $domain
+
+Domain for NTLM authentication.
+
+=item header => $headers
+
+Extra headers to send to the proxy.
+
+=item proctitle => $title
+
+Sets the proxy title.
+
+=back
+
+=item ssh_w
+
+This backend uses the tunnel support available from recent versions of
+OpenSSH through the C<-w> flag.
+
+It allows to stablish a connection through an SSH gateway without
+running any command on the gateway, but it requires tunnels to be
+administratively enabled there (something that doesn't happen
+frequently).
+
+=item perl
+
+This backend uses one perl one-liner to connect to the remote host. It
+is useful to cross through SSH gateways were you will not find any
+C<netcat> or similar program, but perl is usually included with the OS.
+
+=back
+
 =head1 SEE ALSO
 
 L<Net::OpenSSH>.
