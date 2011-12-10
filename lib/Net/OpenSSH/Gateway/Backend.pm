@@ -132,7 +132,7 @@ sub _parse_connection_opts {
 sub new {
     my $class = shift;
     my %opts = $class->_parse_connection_opts(@_);
-    my @proxies = delete $opts{proxies};
+    my @proxies = @{delete $opts{proxies}};
     my $check = delete $opts{check};
 
     my $name = $class;
