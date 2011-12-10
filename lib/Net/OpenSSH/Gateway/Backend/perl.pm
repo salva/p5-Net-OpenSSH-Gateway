@@ -58,18 +58,15 @@ sub _minify_code {
     $code;
 }
 
-sub _generate_pnc {
+sub one_liner {
     my $self = shift;
-
-    open (my $out, ">/tmp/pnc") or die $!;
-
-    print $out "#!/usr/bin/perl\n";
-    print $out "use $_" . (@{$modules{$_}} ? " qw(@{$modules{$_}})" : '') .";\n" for keys %modules;
-    my $code = $self->_minify_code($data);
-    $code =~ s/\bSERVER\b/\$ARGV[0]/;
-    $code =~ s/\bPORT\b/\$ARGV[1]/;
-    print $out "$code\n";
-    close $out;
+    my @out = 'perl';
+    for my $k (keys %modules) {
+        push @out, "-M$k" . (@{$modules{$k}} ? '=' . join(',', @{$modules{$k}}) : '')
+    }
+    push @out, '-e' .  $self->_minify_code($data);
+    require Net::OpenSSH;
+    scalar Net::OpenSSH->shell_quote(@out);
 }
 
 __DATA__
