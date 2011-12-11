@@ -77,8 +77,9 @@ sub one_liner {
 
 __DATA__
 #$0=perl;
-$socket = new IO::Socket::INET "SERVER:PORT" or die $!;
+$socket = new IO::Socket::INET "SERVER:PORT";
 blocking $_ 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
+
 L:
 for (0, 1) {
     sysread ($in[$_], $buffer, 8**5) || exit and $buffer[$_] .= $buffer
