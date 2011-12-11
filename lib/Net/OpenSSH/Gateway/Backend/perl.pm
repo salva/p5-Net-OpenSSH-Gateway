@@ -21,8 +21,8 @@ sub check_args {
     1;
 }
 
-my %modules = ( Socket => [],
-                Fcntl  => [qw(F_SETFL F_GETFL O_NONBLOCK)] );
+my %modules = ( 'IO::Socket::INET' => [] );
+#Fcntl  => [qw(F_SETFL F_GETFL O_NONBLOCK)] );
 
 sub _command_args {
     my ($self, %opts) = @_;
@@ -64,17 +64,21 @@ sub one_liner {
     for my $k (keys %modules) {
         push @out, "-M$k" . (@{$modules{$k}} ? '=' . join(',', @{$modules{$k}}) : '')
     }
-    push @out, '-e' .  $self->_minify_code($data);
+    my $code = $data;
+    $code =~ s/\bPORT\b/\$ARGV[1]/g;
+    $code =~ s/\bSERVER\b/\$ARGV[0]/g;
+    push @out, '-e' . $self->_minify_code($code);
+
     require Net::OpenSSH;
     scalar Net::OpenSSH->shell_quote(@out);
 }
 
-__DATA__
-$0=perl;
-socket($socket, AF_INET, SOCK_STREAM, 0) &&
-connect($socket,  sockaddr_in PORT, inet_aton "SERVER") || die $!;
-fcntl $_, F_SETFL, O_NONBLOCK|fcntl $_, F_GETFL, 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
+1;
 
+__DATA__
+#$0=perl;
+$socket = new IO::Socket::INET "SERVER:PORT" or die $!;
+blocking $_ 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
 L:
 for (0, 1) {
     sysread ($in[$_], $buffer, 8**5) || exit and $buffer[$_] .= $buffer
@@ -85,3 +89,4 @@ for (0, 1) {
 }
 select $iv, $ov, $u, 5;
 goto L
+
