@@ -40,7 +40,6 @@ sub _command_args {
 
 sub before_ssh_connect {
     my $self = shift;
-    my $sftp;
     if (my $ssh = $self->{via_ssh}) {
         require App::pnc;
         unless ($ssh->scp_put($INC{"App/pnc.pm"}, $self->_remote_pnc)) {
