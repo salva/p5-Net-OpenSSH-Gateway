@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Carp;
 use Fcntl qw(F_GETFL F_SETFL O_NONBLOCK);
+use Net::OpenSSH;
 
 my @default_backends = qw(ssh_w netcat socat socat2 ncat perl pnc);
 
