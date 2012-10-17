@@ -43,7 +43,7 @@ my %flags = ( ntlm     => 'N',
               verbose  => 'v'
             );
 
-my %opts =  ( passfile  => 'F',
+my %kv    = ( passfile  => 'F',
               domain    => 't',
               header    => 'H',
               proctitle => 'x' );
@@ -67,8 +67,8 @@ sub _command_args {
     for my $k (keys %flags) {
         push @args, "-$flags{$k}" if $self->{private}{$k};
     }
-    for my $k (keys %opts) {
-        push @args, "-$opts{$k}", $self->_slave_quote($self->{private}{$k})
+    for my $k (keys %kv) {
+        push @args, "-$kv{$k}", $self->_slave_quote($self->{private}{$k})
             if defined $self->{private}{$k};
     }
 
