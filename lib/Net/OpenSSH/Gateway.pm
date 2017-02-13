@@ -18,8 +18,10 @@ sub _first_defined { defined and return $_ for @_; () }
 my %default_proxy_port = ( http    => 8080,
                            https   => 8443,
                            socks4  => 1080,
+                           socks4a => 1080,
                            socks5  => 1080,
                            socks4s => 1443,
+                           socks4as=> 1443,
                            socks5s => 1443,
                            ssh     => 22,
                            ssl     => 22 );
@@ -33,8 +35,13 @@ sub _parse_proxy_opts {
 
     if (defined $url) {
         ($scheme, $user, $password, $host, $port) =
-            $url =~ m{^(?:(ssl|ssh|https?|socks[45]?s?)://)?(?:([^:]+?)(?::(.*))?\@)?([a-z0-9][\w-]*(?:\.[a-z0-9][\w-]*)*)(?::([\w+]+))?/?$}i
-                or croak "bad proxy url '$url'";
+            $url =~ m{^
+                      (?:(ssl|ssh|https?|socks(?:4a?|5)?s?)://)?
+                      (?:([^:\@]+?)(?::(.*+)?)?\@)?
+                      ([a-z0-9][\w-]*(?:\.[a-z0-9][\w-]*)*)
+                      (?: :([\w+]+) )?
+                      /?
+                      $}ix or croak "bad proxy url '$url'";
     }
 
     $scheme = $proxy->{scheme} unless defined $scheme;
@@ -47,12 +54,16 @@ sub _parse_proxy_opts {
     $port = $proxy->{port} unless defined $port;
     $port = $default_proxy_port{$scheme} unless defined $port;
     if ($port =~ /\D/) {
-        $port = getservbyname($port, 'tcp')
+        my $port1 = getservbyname($port, 'tcp')
             or croak "invalid proxy port specification '$port'";
+        $port = $port1;
     }
 
     $user   = $proxy->{user} unless defined $user;
     $password = $proxy->{password} unless defined $password;
+
+    croak "socks4 protocol does not support authentication"
+        if defined $password and $scheme =~ /^socks4/;
 
     if ($scheme eq 'ssl') {
         $host = 'localhost' unless defined $host;
@@ -107,10 +118,10 @@ sub _collapse_ssl_proxies {
     my $self = shift;
     my @ok;
     while (my $proxy = shift) {
-        if (@_ and $proxy->{schema} eq 'ssl') {
+        if (@_ and defined $proxy->{scheme} and $proxy->{scheme} eq 'ssl') {
             my $next = $_[0];
-            if ($next->{schema} =~ /^(?:http|socks[45])$/ ) {
-                $next->{schema} .= 's';
+            if ($next->{scheme} =~ /^(?:http|socks[45])$/ ) {
+                $next->{scheme} .= 's';
                 $next->{ssl} = 1;
                 $next->{url} = $self->_make_proxy_url($proxy);
                 next;
