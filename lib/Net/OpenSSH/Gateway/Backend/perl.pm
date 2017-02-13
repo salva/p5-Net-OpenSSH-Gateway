@@ -58,21 +58,6 @@ sub _minify_code {
     $code;
 }
 
-sub one_liner {
-    my $self = shift;
-    my @out = 'perl';
-    for my $k (keys %modules) {
-        push @out, "-M$k" . (@{$modules{$k}} ? '=' . join(',', @{$modules{$k}}) : '')
-    }
-    my $code = $data;
-    $code =~ s/\bPORT\b/\$ARGV[1]/g;
-    $code =~ s/\bSERVER\b/\$ARGV[0]/g;
-    push @out, '-e' . $self->_minify_code($code);
-
-    require Net::OpenSSH;
-    scalar Net::OpenSSH->shell_quote(@out);
-}
-
 1;
 
 __DATA__
