@@ -41,7 +41,4 @@ sub before_ssh_connect {
     $self->SUPER::before_ssh_connect;
 }
 
-sub proxy_command {
-    
-    
-}
+sub proxy_command {}
