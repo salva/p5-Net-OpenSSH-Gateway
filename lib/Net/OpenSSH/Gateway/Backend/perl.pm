@@ -133,6 +133,7 @@ sub _command_args {
     }
 
     my $code = $data;
+    $code =~ s/ALARM_CODE;/alarm $self->{timeout};/;
     $code =~ s/CONNECT_CODE;/$connect_code/;
     $code =~ s/PROXY_CODE;/$proxy_code/;
     $code = $self->_slave_quote($self->_minify_code($code));
@@ -165,8 +166,10 @@ sub _minify_code {
 
 __DATA__
 $0=perl;
+ALARM_CODE;
 CONNECT_CODE;
 PROXY_CODE;
+alarm 0;
 blocking $_ 0 for @in = (*STDIN, $socket), @out = ($socket, *STDOUT);
 
 L:
